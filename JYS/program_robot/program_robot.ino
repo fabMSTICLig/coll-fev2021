@@ -39,7 +39,7 @@
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-int		rgb_array[3];
+int		rgb_array[3] = {0};
 int 	mode = STOP_MODE;
 int		turn_counter = 0;
 Servo	myservo;

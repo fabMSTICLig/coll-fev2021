@@ -28,9 +28,6 @@
 # define SPEED_ZERO		90
 # define SPEED_BACK		75
 
-# define THRESHOLD_MAX	60
-# define THRESHOLD_MIN	40
-
 # define RED_MODE		0
 # define GREEN_MODE		1
 # define BLUE_MODE		2
@@ -39,11 +36,11 @@
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-int		rgb_array[3] = {0};
-int 	mode = STOP_MODE;
-int		turn_counter = 0;
-Servo	myservo;
-Servo	banane;
+int		rgb_array[3] = {0}; // tableau contenant { rouge , vert , bleu } recues par le capteur
+int 	mode = STOP_MODE;   // Mode de detection: RED_MODE || GREEN_MODE || BLUE_MODE || BLACK_MODE || STOP_MODE
+int		turn_counter = 0;   // compteur de temps de rotation pour inverser le sens
+Servo	myservo;			// servomoteur gauche
+Servo	banane;				// Servomoteur droit
 
 void	setLedColor(int redValue, int greenValue, int blueValue);
 
@@ -69,7 +66,6 @@ void	initLed()
 	strip.setBrightness(50);
 	setLedColor(25, 25, 25);
 	delay(50);
-
 }
 
 void	initSensor()
@@ -79,7 +75,7 @@ void	initSensor()
 	pinMode(S2, OUTPUT);
 	pinMode(S3, OUTPUT);
 	pinMode(sensorOut, INPUT);
-	// Setting frequency-scaling to 20%
+	// definit l'echelle de frequence à 20%
 	digitalWrite(S0,HIGH);
 	digitalWrite(S1,LOW);
 }
@@ -125,11 +121,7 @@ void	getMode()
 void	setLedColor(int redValue, int greenValue, int blueValue)
 {
 	int32_t color = strip.Color(redValue, greenValue, blueValue);
-	Serial.print("setLedColor: ");
-	Serial.print(redValue);
-	Serial.print(greenValue);
-	Serial.println(blueValue);
-	for(int i=0; i<strip.numPixels(); i++)
+	for(int i = 0; i<strip.numPixels(); i++)
 	{
 		strip.setPixelColor(i, color);
 		strip.show();
@@ -139,7 +131,7 @@ void	setLedColor(int redValue, int greenValue, int blueValue)
 
 int		redDetected()
 {
-	if (rgb_array[1] > (rgb_array[0] + 20) && rgb_array[2] > (rgb_array[0] + 20) && rgb_array[0] < THRESHOLD_MIN)
+	if (rgb_array[1] > (rgb_array[0] + 20) && rgb_array[2] > (rgb_array[0] + 20) && rgb_array[0] < 40)
 	{
 		Serial.print("ROUGE ");
 		return (1);
@@ -149,7 +141,7 @@ int		redDetected()
 
 int		greenDetected()
 {
-	if (rgb_array[0] > (rgb_array[1] + 20) && rgb_array[2] > (rgb_array[1] + 20) && rgb_array[1] < THRESHOLD_MIN)
+	if (rgb_array[0] > (rgb_array[1] + 20) && rgb_array[2] > (rgb_array[1] + 20) && rgb_array[1] < 40)
 	{
 		Serial.print("VERT ");
 		return (1);
@@ -159,7 +151,7 @@ int		greenDetected()
 
 int		blueDetected()
 {
-	if (rgb_array[0] > (rgb_array[2] + 20) && rgb_array[1] > (rgb_array[2] + 20) && rgb_array[2] < THRESHOLD_MIN)
+	if (rgb_array[0] > (rgb_array[2] + 20) && rgb_array[1] > (rgb_array[2] + 20) && rgb_array[2] < 40)
 	{
 		Serial.print("BLEU ");
 		return (1);
@@ -169,7 +161,7 @@ int		blueDetected()
 
 int		blackDetected()
 {
-	if (rgb_array[0] < THRESHOLD_MAX && rgb_array[1] < THRESHOLD_MAX && rgb_array[2] < THRESHOLD_MAX)
+	if (rgb_array[0] < 60 && rgb_array[1] < 60 && rgb_array[2] < 60)
 	{
 		Serial.print("NOIR ");
 		return (1);
@@ -210,7 +202,6 @@ void	tournerGauche()
 	banane.write(90);
 }
 
-
 void	tourner()
 {
 	Serial.println("TOURNER");
@@ -229,15 +220,19 @@ void	tourner()
 	}
 }
 
+void printValues()
+{
+	Serial.print(" value => red: ");
+	Serial.print(rgb_array[0]);
+	Serial.print("\tgreen: ");
+	Serial.print(rgb_array[1]);
+	Serial.print("\tblue: ");
+	Serial.println(rgb_array[2]);
+}
+
 void	folowRedLine()
 {
-	Serial.print(" value => ");
-	Serial.print(rgb_array[0]);
-	Serial.print("\tgreen ( ");
-	Serial.print(rgb_array[1]);
-	Serial.print(")\tblue(");
-	Serial.print(rgb_array[2]);
-	Serial.println(")");
+	printValues();
 	if (redDetected())
 	{
 		avancer();
@@ -250,8 +245,7 @@ void	folowRedLine()
 
 void	folowGreenLine()
 {
-	Serial.print(" value => ");
-	Serial.println(rgb_array[1]);
+	printValues();
 	if (greenDetected())
 	{
 		avancer();
@@ -264,8 +258,7 @@ void	folowGreenLine()
 
 void	folowBlueLine()
 {
-	Serial.print(" value => ");
-	Serial.println(rgb_array[2]);
+	printValues();
 	if (blueDetected())
 	{
 		avancer();
@@ -278,12 +271,7 @@ void	folowBlueLine()
 
 void	folowBlackLine()
 {
-	Serial.print("BLACK:\n\tred value => ");
-	Serial.println(rgb_array[0]);
-	Serial.print("\tgreen value => ");
-	Serial.println(rgb_array[0]);
-	Serial.print("\tblue value => ");
-	Serial.println(rgb_array[0]);
+	printValues();
 	if (blackDetected())
 	{
 		avancer();
@@ -296,17 +284,17 @@ void	folowBlackLine()
 
 void	getColorValue()
 {
-	// Setting Red filtered photodiodes to be read
+	// definit le filtre rouge des photodiodes pour etre lues
 	digitalWrite(S2,LOW);
 	digitalWrite(S3,LOW);
 	rgb_array[0] = pulseIn(sensorOut, LOW);
 	delay(50);
-	// Setting Green filtered photodiodes to be read
+	// definit le filtre vert des photodiodes pour etre lues
 	digitalWrite(S2,HIGH);
 	digitalWrite(S3,HIGH);
 	rgb_array[1] = pulseIn(sensorOut, LOW);
 	delay(50);
-	// Setting Blue filtered photodiodes to be read
+	// definit le filtre blue des photodiodes pour etre lues
 	digitalWrite(S2,LOW);
 	digitalWrite(S3,HIGH);
 	rgb_array[2] = pulseIn(sensorOut, LOW);
@@ -345,13 +333,8 @@ void	loop()
 	}
 	else
 	{
-		Serial.println(F("STOP MODE"));
+		Serial.print(F("Stop\t"));
+		printValues();
 		stopMotors();
-		Serial.print(F("Red:\t"));
-		Serial.println(rgb_array[0]);
-		Serial.print(F("Green:\t"));
-		Serial.println(rgb_array[1]);
-		Serial.print(F("Blue:\t"));
-		Serial.println(rgb_array[2]);
 	}
  }
